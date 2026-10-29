@@ -60,6 +60,7 @@ class CaptureService : AccessibilityService() {
     @Volatile private var region: Rect? = null
     @Volatile private var up = false
     private var merger = Merger()
+    @Volatile private var junkWords: List<String> = emptyList()
     private val apps = LinkedHashSet<String>()
     private var startedAt = 0L
 
@@ -122,7 +123,7 @@ class CaptureService : AccessibilityService() {
     /** At most one capture waits at a time, so a fling can't pile up work. */
     private fun schedule() {
         if (scheduled.compareAndSet(false, true)) {
-            main.postDelayed({ worker.execute { captureNow(false) } }, 80)
+            main.postDelayed({ worker.execute { captureNow(false) } }, 40)
         }
     }
 
@@ -166,7 +167,9 @@ class CaptureService : AccessibilityService() {
             if (s.isEmpty() && n.childCount == 0) {
                 s = n.contentDescription?.toString()?.trim() ?: ""
             }
-            if (s.isNotEmpty() && inRegion(b, reg)) out.add(Item(b, s))
+            // Ads and buttons are dropped one node at a time, BEFORE nodes on the same row are joined,
+            // so a floating ad can never take a story line down with it.
+            if (s.isNotEmpty() && inRegion(b, reg) && !Junk.isJunk(s, junkWords)) out.add(Item(b, s))
         }
         for (i in 0 until n.childCount) {
             collect(n.getChild(i), reg, out, depth + 1)
@@ -211,6 +214,7 @@ class CaptureService : AccessibilityService() {
 
     private fun startSession() {
         up = Prefs.isUp(this)
+        junkWords = Junk.parse(Prefs.junk(this))
         synchronized(lock) {
             merger = Merger()
             apps.clear()
