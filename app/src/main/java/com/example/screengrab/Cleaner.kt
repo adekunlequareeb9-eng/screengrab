@@ -12,10 +12,15 @@ object Junk {
         return parse(if (c != null) Prefs.junk(c) else Prefs.DEFAULT_JUNK)
     }
 
+    // Gift buttons and prices that float over the story: "Flower", "Like", "Free", "₦200.00".
+    private val builtin = setOf("flower", "like", "free", "gift", "gifts", "coffee", "champagne", "luxury car")
+    private val price = Regex("""^[₦$€£]\s?[\d,.]+$""")
+
     /** A line is junk if it equals a phrase, or (for phrases of 12+ characters) contains it. */
     fun isJunk(line: String, words: List<String>): Boolean {
         val t = line.trim().lowercase()
         if (t.isEmpty()) return true
+        if (t in builtin || price.matches(t)) return true
         for (w in words) {
             if (t == w) return true
             if (w.length >= 12 && t.contains(w)) return true
@@ -32,6 +37,8 @@ object Junk {
  *  - [...] gap markers are dropped (they are mostly ad breaks); the count goes in the md header
  */
 object Cleaner {
+
+    const val CUT = "[possible cut: the end of the chapter above may be missing]"
 
     private val wrap = Regex(" , ")
     private val para = Regex("""([.!?]["”’]?), """)
@@ -57,6 +64,8 @@ object Cleaner {
                 if (i == 0 && open && out.isNotEmpty() && !chapter.containsMatchIn(p)) {
                     out[out.size - 1] = out[out.size - 1] + " " + p
                 } else {
+                    // A new chapter starts while the last sentence was unfinished: text was missed.
+                    if (i == 0 && open && out.isNotEmpty()) out.add(CUT)
                     out.add(p)
                 }
             }
