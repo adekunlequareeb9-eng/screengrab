@@ -21,6 +21,22 @@ object Prefs {
         p(c).edit().putBoolean("up", v).apply()
     }
 
+    const val DEFAULT_JUNK = "leave a comment\nleave a comment image\nuser gifts ranking\nlocal ad\n" +
+        "ad-free for 30 mins\nconnect now\nconnect to keep reading\n" +
+        "once connected, you can download this novel\nread legit, support authors with ads.\nimage"
+
+    /** Tidy the saved text: fix stray commas, join split sentences, drop ad lines. */
+    fun clean(c: Context): Boolean = p(c).getBoolean("clean", true)
+    fun setClean(c: Context, v: Boolean) {
+        p(c).edit().putBoolean("clean", v).apply()
+    }
+
+    /** One phrase per line; lines that match are never saved. */
+    fun junk(c: Context): String = p(c).getString("junk", DEFAULT_JUNK) ?: DEFAULT_JUNK
+    fun setJunk(c: Context, v: String) {
+        p(c).edit().putString("junk", v).apply()
+    }
+
     fun controls(c: Context): Boolean = p(c).getBoolean("controls", true)
     fun setControls(c: Context, v: Boolean) {
         p(c).edit().putBoolean("controls", v).apply()
@@ -74,6 +90,10 @@ object SessionStore {
             i++
         }
         val secs = ((System.currentTimeMillis() - startedAt) / 1000).coerceAtLeast(0)
+        val gaps = lines.count { it == Merger.GAP }
+        val tidy = Prefs.clean(c)
+        val body = if (tidy) Cleaner.clean(lines) else lines
+        val sep = if (tidy) "\n\n" else "\n"
         val sb = StringBuilder()
         if (md) {
             sb.append("# Screen capture\n\n")
@@ -82,11 +102,16 @@ object SessionStore {
                 .append('\n')
             sb.append("- Duration: ").append(secs / 60).append("m ").append(secs % 60).append("s\n")
             if (apps.isNotEmpty()) sb.append("- Apps: ").append(apps.joinToString(", ")).append('\n')
-            sb.append("- Lines: ").append(lines.size).append("\n\n---\n\n")
-            sb.append(lines.joinToString("\n\n"))
+            sb.append("- Paragraphs: ").append(body.size).append('\n')
+            if (tidy && gaps > 0) {
+                sb.append("- Possible gaps: ").append(gaps)
+                    .append(" (usually ad breaks; turn cleaning off to see where)\n")
+            }
+            sb.append("\n---\n\n")
+            sb.append(body.joinToString("\n\n"))
             sb.append('\n')
         } else {
-            sb.append(lines.joinToString("\n"))
+            sb.append(body.joinToString(sep))
             sb.append('\n')
         }
         f.writeText(sb.toString())
