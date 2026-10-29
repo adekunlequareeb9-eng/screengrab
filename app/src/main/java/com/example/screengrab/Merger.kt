@@ -17,8 +17,7 @@ class Merger(private val window: Int = 400) {
 
     val lines = ArrayList<String>()
 
-    // Ads and buttons to ignore, and long lines already saved (prose never repeats a 60+ character line).
-    private val junk = Junk.words()
+    // Long lines already saved (prose never repeats a 60+ character line).
     private val seen = HashSet<String>()
 
     private fun isLong(s: String) = s.length >= 60
@@ -69,7 +68,8 @@ class Merger(private val window: Int = 400) {
 
     /** Returns how many lines were added. */
     fun add(raw: List<String>): Int {
-        val cur = raw.filter { !Junk.isJunk(it, junk) }
+        // Ads are already removed node by node in CaptureService, so nothing is dropped here.
+        val cur = raw
         if (cur.isEmpty()) return 0
         if (lines.isEmpty()) {
             return append(cur)
