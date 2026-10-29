@@ -97,6 +97,20 @@ class MainActivity : Activity() {
         root.addView(dirBtn)
         root.addView(ctlBtn)
 
+        val cleanBtn = Button(this)
+        cleanBtn.setAllCaps(false)
+        fun showClean() {
+            cleanBtn.text = "Tidy text (fix commas, join lines): " +
+                (if (Prefs.clean(this)) "ON" else "OFF") + "  (tap to switch)"
+        }
+        cleanBtn.setOnClickListener {
+            Prefs.setClean(this, !Prefs.clean(this))
+            showClean()
+        }
+        showClean()
+        root.addView(cleanBtn)
+        root.addView(btn("Ignore list: ads and buttons to skip") { editJunk() })
+
         val h = label("Saved sessions", 18f, true)
         h.setPadding(0, dp(16), 0, dp(4))
         root.addView(h)
@@ -157,6 +171,36 @@ class MainActivity : Activity() {
             lp.topMargin = dp(6)
             list.addView(row, lp)
         }
+    }
+
+    private fun editJunk() {
+        val input = android.widget.EditText(this)
+        input.setText(Prefs.junk(this))
+        input.setSingleLine(false)
+        input.minLines = 8
+        input.gravity = android.view.Gravity.TOP
+        input.textSize = 14f
+        val box = LinearLayout(this)
+        box.setPadding(dp(16), dp(8), dp(16), 0)
+        box.addView(
+            input,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Skip lines like these (one per line)")
+            .setView(box)
+            .setPositiveButton("Save") { _, _ ->
+                Prefs.setJunk(this, input.text.toString())
+                Toast.makeText(this, "Saved. Applies to the next recording.", Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton("Reset") { _, _ ->
+                Prefs.setJunk(this, Prefs.DEFAULT_JUNK)
+                Toast.makeText(this, "Back to the default list", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun sizeText(f: File): String {
