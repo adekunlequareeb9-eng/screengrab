@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Screen Grab</string>
+    <string name="app_name">Screen Grab v1.1</string>
     <string name="service_label">Screen Grab</string>
     <string name="service_desc">Reads the text visible on screen inside the area you choose, only while you press REC, and saves it as a note inside this app. Nothing leaves your phone.</string>
 </resources>
