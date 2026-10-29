@@ -17,6 +17,12 @@ class Merger(private val window: Int = 400) {
 
     val lines = ArrayList<String>()
 
+    // Ads and buttons to ignore, and long lines already saved (prose never repeats a 60+ character line).
+    private val junk = Junk.words()
+    private val seen = HashSet<String>()
+
+    private fun isLong(s: String) = s.length >= 60
+
     private fun append(rest: List<String>): Int {
         var r = rest
         var added = 0
@@ -26,12 +32,18 @@ class Merger(private val window: Int = 400) {
             val first = r[0]
             if (last.length >= 20 && first.length > last.length && first.startsWith(last)) {
                 lines[lines.size - 1] = first
+                if (isLong(first)) seen.add(first)
                 r = r.drop(1)
                 added++
             }
         }
-        lines.addAll(r)
-        return added + r.size
+        val fresh = ArrayList<String>()
+        for (s in r) {
+            if (isLong(s) && !seen.add(s)) continue
+            fresh.add(s)
+        }
+        lines.addAll(fresh)
+        return added + fresh.size
     }
 
     private fun tailEquals(cur: List<String>, k: Int): Boolean {
@@ -56,11 +68,11 @@ class Merger(private val window: Int = 400) {
     }
 
     /** Returns how many lines were added. */
-    fun add(cur: List<String>): Int {
+    fun add(raw: List<String>): Int {
+        val cur = raw.filter { !Junk.isJunk(it, junk) }
         if (cur.isEmpty()) return 0
         if (lines.isEmpty()) {
-            lines.addAll(cur)
-            return cur.size
+            return append(cur)
         }
         val n = lines.size
 
@@ -89,9 +101,11 @@ class Merger(private val window: Int = 400) {
             a--
         }
 
-        // 3) nothing in common: keep everything, mark the gap
-        lines.add(GAP)
-        lines.addAll(cur)
-        return cur.size + 1
+        // 3) nothing lines up. Long lines we already have are skipped (re-scrolled or an ad broke the overlap).
+        val fresh = cur.filter { !(isLong(it) && it in seen) }
+        if (fresh.isEmpty()) return 0
+        // Only mark a gap when none of this screen was seen before.
+        if (fresh.size == cur.size) lines.add(GAP)
+        return append(fresh) + 1
     }
 }
