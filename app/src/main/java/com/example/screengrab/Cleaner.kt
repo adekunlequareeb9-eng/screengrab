@@ -16,14 +16,18 @@ object Junk {
     private val builtin = setOf("flower", "like", "free", "gift", "gifts", "coffee", "champagne", "luxury car")
     private val price = Regex("""^[₦$€£]\s?[\d,.]+$""")
 
-    /** A line is junk if it equals a phrase, or (for phrases of 12+ characters) contains it. */
+    /**
+     * A line is junk if it equals a phrase, or it is basically that phrase (the phrase is 12+ characters
+     * and the line is at most 25 characters longer). Longer text that merely mentions a phrase is story
+     * text and is kept.
+     */
     fun isJunk(line: String, words: List<String>): Boolean {
         val t = line.trim().lowercase()
         if (t.isEmpty()) return true
         if (t in builtin || price.matches(t)) return true
         for (w in words) {
             if (t == w) return true
-            if (w.length >= 12 && t.contains(w)) return true
+            if (w.length >= 12 && t.length <= w.length + 25 && t.contains(w)) return true
         }
         return false
     }
